@@ -1,0 +1,8 @@
+set environment variable CUPTI_SAMPLING_PERIOD to a value from 
+  1 (minimum sampling period --> fastest sampling) to 5 (maximum sampling period --> slowest sampling)
+setting to a value outside this range will disable CUPTI.
+
+Example usage:
+
+CUPTI_SAMPLING_PERIOD=5  $HOME/pkgs-src/cupti-overhead-test/timesampling ./raja-perf-nolibs.exe -k MULADDSUB
+

@@ -1,0 +1,4 @@
+#!/bin/bash
+DIR=`dirname $0`
+export CUPTI_SAMPLING_PERIOD=5
+LD_PRELOAD="${DIR}/pc_sampling.so ${LD_PRELOAD}" $*
