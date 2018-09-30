@@ -2,7 +2,7 @@ This directory contains a test that illustrates the overhead of CUPTI PC Samplin
 
 The directory contains a Makefile for 
 - downloading the raja perf suite, configuring it, and building it
-- building a shared library that enables CUPTI PC sampling in a constructor and turning it off in a destructor
+- building a shared library that enables CUPTI PC sampling in a constructor and turns it off in a destructor
 - running the MULADDSUB kernel from the RAJA perf suite without CUPTI
 - running the MULADDSUB kernel from the RAJA perf suite with CUPTI PC sampling enabled with a low sampling frequency
 
@@ -13,7 +13,7 @@ A reference typescript of our test results along with information about the x86_
 which it was performed is included in the file rice-test-results.txt. 
 
 
-Performing the tesst:
+Performing the test:
 
 	make prepare 			# download, configure, and build the software:
-	make test 			# run the RAJA MULADDSUB kernel without CUPTI in a few seconds and then with PC sampling for ~10 minutes
+	make test 			# run the RAJA MULADDSUB kernel without CUPTI and then with CUPTI PC sampling
