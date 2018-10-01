@@ -1,0 +1,108 @@
+[johnmc@gpu cupti-test]$ ldd cupti-preload/pc_sampling.so 
+        linux-vdso.so.1 =>  (0x00007fff46385000)
+        libcuda.so.1 => /lib64/libcuda.so.1 (0x00007f7a4069d000)
+        libcudart.so.10.0 => /usr/local/cuda-10.0/lib64/libcudart.so.10.0 (0x00007f7a40423000)
+        libcupti.so => /home/johnmc/pkgs-src/cupti-test/cupti-preload/../cupti-linux-cuda10-1.0.6-24971014/lib/x64/l bcupti.so (0x00007f7a3fc8f000)
+        libstdc++.so.6 => /projects/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/gcc-7.3.0-qrjpi76aeo4bysagruwwfii6o eh56lj/lib64/libstdc++.so.6 (0x00007f7a3f90d000)
+        libm.so.6 => /lib64/libm.so.6 (0x00007f7a3f60b000)
+        libgcc_s.so.1 => /projects/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/gcc-7.3.0-qrjpi76aeo4bysagruwwfii6on h56lj/lib64/libgcc_s.so.1 (0x00007f7a3f3f4000)
+        libc.so.6 => /lib64/libc.so.6 (0x00007f7a3f027000)
+        libdl.so.2 => /lib64/libdl.so.2 (0x00007f7a3ee23000)
+        libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f7a3ec07000)
+        librt.so.1 => /lib64/librt.so.1 (0x00007f7a3e9ff000)
+        libnvidia-fatbinaryloader.so.410.48 => /lib64/libnvidia-fatbinaryloader.so.410.48 (0x00007f7a3e7b2000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f7a41997000)
+
+[johnmc@gpu cupti-test]$ make test
+******* time raja perf suite kernel MULADDSUB without CUPTI ********
+time rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+         # passes = 1
+         Kernel size factor = 1
+         Kernel rep factor = 1
+         Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+2.00user 1.77system 0:03.89elapsed 97%CPU (0avgtext+0avgdata 210056maxresident)k
+0inputs+32outputs (0major+11513minor)pagefaults 0swaps
+******* time raja perf suite kernel MULADDSUB with CUPTI PC Sampling ********
+time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+CUPTI: initializing PC sampling for device Tesla V100-PCIE-16GB with compute capability 7.0. Sampling period is CUPT _ACTIVITY_PC_SAMPLING_PERIOD_MAX.
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+         # passes = 1
+         Kernel size factor = 1
+         Kernel rep factor = 1
+         Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+CUPTI: total samples = 731519, dropped samples = 0, total records = 189924, dropped records = 0
+       total buffer count = 2, total buffer valid size = 7460720
+551.57user 934.72system 24:34.76elapsed 100%CPU (0avgtext+0avgdata 448572maxresident)k
+0inputs+32outputs (0major+80023minor)pagefaults 0swaps
+[johnmc@gpu cupti-test]$ 
