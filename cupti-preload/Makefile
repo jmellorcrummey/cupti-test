@@ -4,9 +4,12 @@
 C=/usr/local/cuda-9.2
 C=/usr/local/cuda-10.0
 P=$(C)/extras/CUPTI
+CUPTI=`pwd`/../cupti-linux-cuda10-1.0.6-24971014
+P=$(CUPTI)
 
 CL=$(C)/lib64
 PL=$(P)/lib64
+PL=$(P)/lib/x64
 INCLUDES=-I$(C)/include -I$(P)/include
 CLIBS= -L$(CL) -Wl,-rpath=$(CL) -L$(PL) -Wl,-rpath=$(PL)
 
