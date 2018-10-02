@@ -25,7 +25,10 @@ test:
 	@echo '******* time raja perf suite kernel MULADDSUB without CUPTI ********'
 	time rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
 	@echo '******* time raja perf suite kernel MULADDSUB with CUPTI PC Sampling ********'
-	time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+	CUPTI_SAMPLING_PERIOD=1 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+	CUPTI_SAMPLING_PERIOD=2 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+	CUPTI_SAMPLING_PERIOD=3 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+	CUPTI_SAMPLING_PERIOD=4 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
 
 distclean:
 	cd cupti-preload; make clean

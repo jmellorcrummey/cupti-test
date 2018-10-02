@@ -70,6 +70,7 @@ volatile int debugger_wait_flag = DEBUGGER_WAIT_FLAG_DEFAULT;
 int doprint = 0;
 int samplingEnabled = 0;
 
+uint64_t pcSamples = 0;
 uint64_t totalSamples = 0;
 uint64_t droppedSamples = 0;
 
@@ -208,7 +209,7 @@ printActivity(CUpti_Activity *record)
       break;
     }
   default:
-    printf("unknown\n");
+    printf("unknown record kind %d\n", record->kind);
     break;
   }
 }
@@ -251,6 +252,7 @@ bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer,
     if(status == CUPTI_SUCCESS) {
       if (doprint) printActivity(record);
       totalRecords++;
+      if (record->kind == CUPTI_ACTIVITY_KIND_PC_SAMPLING) pcSamples++;
       if (record->kind == CUPTI_ACTIVITY_KIND_PC_SAMPLING_RECORD_INFO) {
 	CUpti_ActivityPCSamplingRecordInfo *pcsriResult = 
 	  (CUpti_ActivityPCSamplingRecordInfo *)(void *)record;
@@ -379,10 +381,9 @@ cupti_fini()
 
   RUNTIME_API_CALL(cudaDeviceSynchronize());
   CUPTI_CALL(cuptiActivityFlushAll(0));
-  printf("CUPTI: total samples = %" PRIu64 ", dropped samples = %" PRIu64 
-	 ", total records = %" PRIu64 ", dropped records = %" PRIu64 "\n",
-	 totalSamples, droppedSamples, totalRecords, droppedRecords);
-  printf("       total buffer count = %" PRIu64 
-	 ", total buffer valid size = %" PRIu64 "\n", 
+  printf("CUPTI: \n\tPC Sampling Activity Record samples = %" PRIu64 "\n\tPC sampling Record Info (samples = %" PRIu64 ",  dropped samples= %" PRIu64 ")"
+	 "\n\ttotal records = %" PRIu64 ", dropped records = %" PRIu64 "\n",
+	 pcSamples, totalSamples, droppedSamples, totalRecords, droppedRecords);
+  printf("\ttotal buffer count = %" PRIu64 ", total buffer valid size = %" PRIu64 "\n", 
 	 bufferCount, totalBufferSize);
 }

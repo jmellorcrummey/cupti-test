@@ -1,0 +1,247 @@
+Script started on Tue Oct  2 17:22:56 2018
+]0;johnmc@gpu:~/pkgs-src/cupti-test[?1034h[johnmc@gpu cupti-test]$ make test
+******* time raja perf suite kernel MULADDSUB without CUPTI ********
+time rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+	 # passes = 1
+	 Kernel size factor = 1
+	 Kernel rep factor = 1
+	 Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+1.95user 1.79system 0:03.85elapsed 97%CPU (0avgtext+0avgdata 212164maxresident)k
+0inputs+32outputs (0major+12021minor)pagefaults 0swaps
+******* time raja perf suite kernel MULADDSUB with CUPTI PC Sampling ********
+CUPTI_SAMPLING_PERIOD=1 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+CUPTI: initializing PC sampling for device Tesla V100-PCIE-16GB with compute capability 7.0. Sampling period is CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_MIN.
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+	 # passes = 1
+	 Kernel size factor = 1
+	 Kernel rep factor = 1
+	 Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+CUPTI: 
+	PC Sampling Activity Record samples = 2781198
+	PC sampling Record Info (samples = 0,  dropped samples= 0)
+	total records = 2781215, dropped records = 0
+	total buffer count = 27, total buffer valid size = 111248360
+12.59user 3.68system 0:16.34elapsed 99%CPU (0avgtext+0avgdata 838736maxresident)k
+0inputs+32outputs (0major+30212minor)pagefaults 0swaps
+CUPTI_SAMPLING_PERIOD=2 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+CUPTI: initializing PC sampling for device Tesla V100-PCIE-16GB with compute capability 7.0. Sampling period is CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_LOW.
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+	 # passes = 1
+	 Kernel size factor = 1
+	 Kernel rep factor = 1
+	 Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+CUPTI: 
+	PC Sampling Activity Record samples = 2730845
+	PC sampling Record Info (samples = 0,  dropped samples= 0)
+	total records = 2730862, dropped records = 0
+	total buffer count = 27, total buffer valid size = 109234240
+12.57user 3.60system 0:16.30elapsed 99%CPU (0avgtext+0avgdata 843604maxresident)k
+0inputs+32outputs (0major+30120minor)pagefaults 0swaps
+CUPTI_SAMPLING_PERIOD=3 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+CUPTI: initializing PC sampling for device Tesla V100-PCIE-16GB with compute capability 7.0. Sampling period is CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_MID.
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+	 # passes = 1
+	 Kernel size factor = 1
+	 Kernel rep factor = 1
+	 Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+CUPTI: 
+	PC Sampling Activity Record samples = 2740183
+	PC sampling Record Info (samples = 0,  dropped samples= 0)
+	total records = 2740200, dropped records = 0
+	total buffer count = 27, total buffer valid size = 109607760
+11.83user 3.73system 0:15.63elapsed 99%CPU (0avgtext+0avgdata 842820maxresident)k
+0inputs+32outputs (0major+29875minor)pagefaults 0swaps
+CUPTI_SAMPLING_PERIOD=4 time cupti-preload/enablesampling rajaperf/cupti-test/bin/raja-perf.exe -k MULADDSUB
+CUPTI: initializing PC sampling for device Tesla V100-PCIE-16GB with compute capability 7.0. Sampling period is CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_HIGH.
+
+
+Reading command line input...
+
+Setting up suite based on input...
+
+
+RAJA performance suite run summary....
+--------------------------------------
+
+How suite will be run:
+	 # passes = 1
+	 Kernel size factor = 1
+	 Kernel rep factor = 1
+	 Output files will be named ./RAJAPerf*
+
+The following kernels and variants will be run:
+
+Variants
+--------
+Base_Seq
+RAJA_Seq
+Base_CUDA
+RAJA_CUDA
+
+Kernels(iterations/rep , reps)
+-----------------------------
+Basic_MULADDSUB (100000 , 3500)
+
+
+Running warmup kernel variants...
+
+
+Running specified kernels and variants...
+
+
+Generate run report files...
+
+
+DONE!!!....
+CUPTI: 
+	PC Sampling Activity Record samples = 24255
+	PC sampling Record Info (samples = 0,  dropped samples= 0)
+	total records = 24272, dropped records = 0
+	total buffer count = 1, total buffer valid size = 970640
+2.15user 3.11system 0:05.45elapsed 96%CPU (0avgtext+0avgdata 837564maxresident)k
+0inputs+32outputs (0major+23740minor)pagefaults 0swaps
+]0;johnmc@gpu:~/pkgs-src/cupti-test[johnmc@gpu cupti-test]$ exit
+exit
+
+Script done on Tue Oct  2 17:24:16 2018
