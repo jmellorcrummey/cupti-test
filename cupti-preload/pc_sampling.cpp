@@ -83,7 +83,7 @@ uint64_t totalBufferSize = 0;
 
 
 std::map<CUpti_ActivityKind, int> activity_count;
-std::map<CUpti_ActivityPCSamplingStallReason, int> pcsampling_count;
+std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsampling_count;
 
 //************************************************************************
 // forward declarations
@@ -178,12 +178,13 @@ printActivity(CUpti_Activity *record)
       CUpti_ActivityPCSampling3 *psRecord = (CUpti_ActivityPCSampling3 *)record;
 
       printf("source %u, functionId %u, pc 0x%llx, corr %u, " 
-	     "samples %u, stallreason %s\n",
+	     "samples %u, latencySamples %u, stallreason %s\n",
 	     psRecord->sourceLocatorId,
 	     psRecord->functionId,
 	     (unsigned long long)psRecord->pcOffset,
 	     psRecord->correlationId,
 	     psRecord->samples,
+	     psRecord->latencySamples,
 	     getStallReasonString(psRecord->stallReason));
       break;
     }
@@ -227,7 +228,7 @@ countActivity(CUpti_Activity *record)
       {
         CUpti_ActivityPCSampling3 *psRecord = (CUpti_ActivityPCSampling3 *)record;
 
-        pcsampling_count[psRecord->stallReason] += psRecord->samples; 
+        pcsampling_count[psRecord->stallReason][psRecord->pcOffset] += psRecord->samples; 
         break;
       }
     default:
@@ -412,7 +413,9 @@ cupti_fini()
   if (doprint && docount) {
     printf("PC sampling count\n");
     for (auto iter : pcsampling_count) {
-      printf("%d : %d\n", iter.first, iter.second);
+      for (auto pc_iter : iter.second) {
+        printf("%d : <%d, %d>\n", iter.first, pc_iter.first, pc_iter.second);
+      }
     }
     printf("Activity count\n");
     for (auto iter : activity_count) {
