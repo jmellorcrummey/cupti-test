@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <map>
 
 
 //************************************************************************
@@ -67,7 +68,8 @@
 
 volatile int debugger_wait_flag = DEBUGGER_WAIT_FLAG_DEFAULT; 
 
-int doprint = 0;
+int doprint = 1;
+int docount = 1;
 int samplingEnabled = 0;
 
 uint64_t totalSamples = 0;
@@ -80,6 +82,8 @@ uint64_t bufferCount = 0;
 uint64_t totalBufferSize = 0;
 
 
+std::map<CUpti_ActivityKind, int> activity_count;
+std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsampling_count;
 
 //************************************************************************
 // forward declarations
@@ -163,7 +167,7 @@ printActivity(CUpti_Activity *record)
   case CUPTI_ACTIVITY_KIND_SOURCE_LOCATOR:
     {
       CUpti_ActivitySourceLocator *sourceLocator = 
-	(CUpti_ActivitySourceLocator *)record;
+        (CUpti_ActivitySourceLocator *)record;
       printf("Source Locator Id %d, File %s Line %d\n", 
 	     sourceLocator->id, sourceLocator->fileName, 
 	     sourceLocator->lineNumber);
@@ -174,19 +178,20 @@ printActivity(CUpti_Activity *record)
       CUpti_ActivityPCSampling3 *psRecord = (CUpti_ActivityPCSampling3 *)record;
 
       printf("source %u, functionId %u, pc 0x%llx, corr %u, " 
-	     "samples %u, stallreason %s\n",
+	     "samples %u, latencySamples %u, stallreason %s\n",
 	     psRecord->sourceLocatorId,
 	     psRecord->functionId,
 	     (unsigned long long)psRecord->pcOffset,
 	     psRecord->correlationId,
 	     psRecord->samples,
+	     psRecord->latencySamples,
 	     getStallReasonString(psRecord->stallReason));
       break;
     }
   case CUPTI_ACTIVITY_KIND_PC_SAMPLING_RECORD_INFO:
     {
       CUpti_ActivityPCSamplingRecordInfo *pcsriResult =
-	(CUpti_ActivityPCSamplingRecordInfo *)(void *)record;
+        (CUpti_ActivityPCSamplingRecordInfo *)(void *)record;
 
       printf("corr %u, totalSamples %llu, droppedSamples %llu\n",
 	     pcsriResult->correlationId,
@@ -197,7 +202,7 @@ printActivity(CUpti_Activity *record)
   case CUPTI_ACTIVITY_KIND_FUNCTION:
     {
       CUpti_ActivityFunction *fResult =
-	(CUpti_ActivityFunction *)record;
+        (CUpti_ActivityFunction *)record;
 
       printf("id %u, ctx %u, moduleId %u, functionIndex %u, name %s\n",
 	     fResult->id,
@@ -210,6 +215,24 @@ printActivity(CUpti_Activity *record)
   default:
     printf("unknown\n");
     break;
+  }
+}
+
+
+static void
+countActivity(CUpti_Activity *record)
+{
+  activity_count[record->kind]++;
+  switch (record->kind) {
+    case CUPTI_ACTIVITY_KIND_PC_SAMPLING:
+      {
+        CUpti_ActivityPCSampling3 *psRecord = (CUpti_ActivityPCSampling3 *)record;
+
+        pcsampling_count[psRecord->stallReason][psRecord->pcOffset] += psRecord->samples; 
+        break;
+      }
+    default:
+      break;
   }
 }
 
@@ -250,6 +273,7 @@ bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer,
     status = cuptiActivityGetNextRecord(buffer, validSize, &record);
     if(status == CUPTI_SUCCESS) {
       if (doprint) printActivity(record);
+      if (docount) countActivity(record);
       totalRecords++;
       if (record->kind == CUPTI_ACTIVITY_KIND_PC_SAMPLING_RECORD_INFO) {
 	CUpti_ActivityPCSamplingRecordInfo *pcsriResult = 
@@ -385,4 +409,17 @@ cupti_fini()
   printf("       total buffer count = %" PRIu64 
 	 ", total buffer valid size = %" PRIu64 "\n", 
 	 bufferCount, totalBufferSize);
+
+  if (doprint && docount) {
+    printf("PC sampling count\n");
+    for (auto iter : pcsampling_count) {
+      for (auto pc_iter : iter.second) {
+        printf("%d : <%d, %d>\n", iter.first, pc_iter.first, pc_iter.second);
+      }
+    }
+    printf("Activity count\n");
+    for (auto iter : activity_count) {
+      printf("%d : %d\n", iter.first, iter.second);
+    }
+  }
 }

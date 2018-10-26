@@ -12,7 +12,7 @@ CLIBS= -L$(CL) -Wl,-rpath=$(CL) -L$(PL) -Wl,-rpath=$(PL)
 
 CC=g++
 
-OPT=-fPIC -g -O3
+OPT=-fPIC -g -O3 -std=c++11
 
 ifndef OS
  OS   := $(shell uname)
