@@ -1,6 +1,4 @@
 /*
- * Copyright 2014-2017 NVIDIA Corporation. All rights reserved
- *
  * Preloaded module that does nothing more than enable pc sampling.
  * All samples are scanned and dropped. This code is to measure
  * CUPTI overhead.
@@ -23,26 +21,36 @@
 // macros
 //************************************************************************
 
-#define RUNTIME_API_CALL(apiFuncCall)					\
-  do {									\
-    cudaError_t _status = apiFuncCall;					\
-    if (_status != cudaSuccess) {					\
-      fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n", \
-	      __FILE__, __LINE__, #apiFuncCall, cudaGetErrorString(_status)); \
-      exit(-1);								\
-    }									\
+#define DRIVER_API_CALL(apiFuncCall)                                         \
+  do {                                                                       \
+    CUresult _status = apiFuncCall;                                          \
+    if (_status != CUDA_SUCCESS) {                                           \
+      fprintf(stderr, "%s:%d: error: function %s failed with error %d.\n",   \
+        __FILE__, __LINE__, #apiFuncCall, _status);                          \
+      exit(-1);                                                              \
+    }                                                                        \
   } while (0)
 
-#define CUPTI_CALL(call)						\
-  do {									\
-    CUptiResult _status = call;						\
-    if (_status != CUPTI_SUCCESS) {					\
-      const char *errstr;						\
-      cuptiGetResultString(_status, &errstr);				\
-      fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n", \
-	      __FILE__, __LINE__, #call, errstr);			\
-      exit(-1);								\
-    }									\
+#define RUNTIME_API_CALL(apiFuncCall)					                              \
+  do {									                                                    \
+    cudaError_t _status = apiFuncCall;					                            \
+    if (_status != cudaSuccess) {					                                  \
+      fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n",  \
+	      __FILE__, __LINE__, #apiFuncCall, cudaGetErrorString(_status));     \
+      exit(-1);								                                              \
+    }									                                                      \
+  } while (0)
+
+#define CUPTI_CALL(call)						                                        \
+  do {									                                                    \
+    CUptiResult _status = call;						                                  \
+    if (_status != CUPTI_SUCCESS) {					                                \
+      const char *errstr;						                                        \
+      cuptiGetResultString(_status, &errstr);				                        \
+      fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n",  \
+	      __FILE__, __LINE__, #call, errstr);			                            \
+      exit(-1);								                                              \
+    }									                                                      \
   } while (0)
 
 
@@ -59,18 +67,18 @@
 #define ALIGN_SIZE (8)
 
 #define DEBUGGER_WAIT_FLAG_DEFAULT 0
-
-
+#define DEBUGGER_PRINT_FLAG_DEFAULT 1
+#define DEBUGGER_COUNT_FLAG_DEFAULT 1
 
 //************************************************************************
 // variables
 //************************************************************************
 
+// control flags
 volatile int debugger_wait_flag = DEBUGGER_WAIT_FLAG_DEFAULT; 
-
-int doprint = 1;
-int docount = 1;
-int samplingEnabled = 0;
+volatile int doprint = DEBUGGER_PRINT_FLAG_DEFAULT;
+volatile int docount = DEBUGGER_COUNT_FLAG_DEFAULT;
+volatile int samplingEnabled = 0;
 
 uint64_t totalSamples = 0;
 uint64_t droppedSamples = 0;
@@ -82,8 +90,9 @@ uint64_t bufferCount = 0;
 uint64_t totalBufferSize = 0;
 
 
-std::map<CUpti_ActivityKind, int> activity_count;
-std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsampling_count;
+std::map<CUpti_ActivityKind, int> activityCount;
+std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsamplingCount;
+CUpti_SubscriberHandle cuptiSubscriber;
 
 //************************************************************************
 // forward declarations
@@ -95,8 +104,6 @@ static void cupti_fini() __attribute__((destructor));
 // ensure cupti_init runs at library load
 static void cupti_init() __attribute__((constructor));
 #endif
-
-
 
 
 //************************************************************************
@@ -115,8 +122,6 @@ debugger_continue()
 {
   debugger_wait_flag = 0;
 }
-
-
 
 //************************************************************************
 // private operations
@@ -193,10 +198,11 @@ printActivity(CUpti_Activity *record)
       CUpti_ActivityPCSamplingRecordInfo *pcsriResult =
         (CUpti_ActivityPCSamplingRecordInfo *)(void *)record;
 
-      printf("corr %u, totalSamples %llu, droppedSamples %llu\n",
+      printf("corr %u, totalSamples %llu, droppedSamples %llu, cycles %llu\n",
 	     pcsriResult->correlationId,
 	     (unsigned long long)pcsriResult->totalSamples,
-	     (unsigned long long)pcsriResult->droppedSamples);
+	     (unsigned long long)pcsriResult->droppedSamples,
+       (unsigned long long)pcsriResult->samplingPeriodInCycles);
       break;
     }
   case CUPTI_ACTIVITY_KIND_FUNCTION:
@@ -222,13 +228,13 @@ printActivity(CUpti_Activity *record)
 static void
 countActivity(CUpti_Activity *record)
 {
-  activity_count[record->kind]++;
+  activityCount[record->kind]++;
   switch (record->kind) {
     case CUPTI_ACTIVITY_KIND_PC_SAMPLING:
       {
         CUpti_ActivityPCSampling3 *psRecord = (CUpti_ActivityPCSampling3 *)record;
 
-        pcsampling_count[psRecord->stallReason][psRecord->pcOffset] += psRecord->samples; 
+        pcsamplingCount[psRecord->stallReason][psRecord->pcOffset] += psRecord->samples; 
         break;
       }
     default:
@@ -252,7 +258,6 @@ bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords)
 	     " bytes\n", *size);
     }
   }
-    
 }
 
 
@@ -276,10 +281,10 @@ bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer,
       if (docount) countActivity(record);
       totalRecords++;
       if (record->kind == CUPTI_ACTIVITY_KIND_PC_SAMPLING_RECORD_INFO) {
-	CUpti_ActivityPCSamplingRecordInfo *pcsriResult = 
-	  (CUpti_ActivityPCSamplingRecordInfo *)(void *)record;
-	totalSamples += (uint64_t) pcsriResult->totalSamples;
-	droppedSamples += (uint64_t) pcsriResult->droppedSamples;
+        CUpti_ActivityPCSamplingRecordInfo *pcsriResult = 
+          (CUpti_ActivityPCSamplingRecordInfo *)(void *)record;
+        totalSamples += (uint64_t) pcsriResult->totalSamples;
+        droppedSamples += (uint64_t) pcsriResult->droppedSamples;
       }
     } else if (status == CUPTI_ERROR_MAX_LIMIT_REACHED) {
       break;
@@ -337,8 +342,24 @@ getPeriod()
 #undef macro
   return CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_INVALID; 
 }
-	
 
+
+static int
+getDevice()
+{
+  int deviceNum = -1;
+  const char *device = getenv("CUPTI_DEVICE_NUM");
+
+  if (device) {
+    deviceNum = atoi(device);
+  } else {
+    printf("usage: set environment variable CUPTI_DEVICE_NUM\n"); 
+    exit(-1);
+  }
+
+  RUNTIME_API_CALL(cudaSetDevice(deviceNum));
+  return deviceNum;
+}
 
 //************************************************************************
 // initialization 
@@ -349,8 +370,7 @@ cupti_init()
 {
   debugger_wait();
 
-  int deviceNum = 0;
-  RUNTIME_API_CALL(cudaGetDevice(&deviceNum));
+  int deviceNum = getDevice();
 
   cudaDeviceProp prop;
   RUNTIME_API_CALL(cudaGetDeviceProperties(&prop, deviceNum));
@@ -375,19 +395,21 @@ cupti_init()
   configPC.samplingPeriod2 = 0;
 
   CUcontext cuCtx;
-  CUresult res = cuCtxGetCurrent(&cuCtx);
-
-  if (cuCtx == NULL) {
-    CUdevice dev = 0;
-    unsigned int flags = 0;
-    res = cuCtxCreate(&cuCtx, flags, dev);
-  }
+  CUdevice dev;
+  DRIVER_API_CALL(cuDeviceGet(&dev, deviceNum));
+  DRIVER_API_CALL(cuCtxCreate(&cuCtx, 0, dev));
+  DRIVER_API_CALL(cuCtxSetCurrent(cuCtx));
 
   CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
 
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_PC_SAMPLING));
-
   CUPTI_CALL(cuptiActivityConfigurePCSampling(cuCtx, &configPC));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
 }
 
 
@@ -406,19 +428,19 @@ cupti_fini()
   printf("CUPTI: total samples = %" PRIu64 ", dropped samples = %" PRIu64 
 	 ", total records = %" PRIu64 ", dropped records = %" PRIu64 "\n",
 	 totalSamples, droppedSamples, totalRecords, droppedRecords);
-  printf("       total buffer count = %" PRIu64 
+  printf("CUPTI: total buffer count = %" PRIu64 
 	 ", total buffer valid size = %" PRIu64 "\n", 
 	 bufferCount, totalBufferSize);
 
   if (doprint && docount) {
-    printf("PC sampling count\n");
-    for (auto iter : pcsampling_count) {
+    printf("CUPTI: PC sampling count\n");
+    for (auto iter : pcsamplingCount) {
       for (auto pc_iter : iter.second) {
         printf("%d : <%d, %d>\n", iter.first, pc_iter.first, pc_iter.second);
       }
     }
-    printf("Activity count\n");
-    for (auto iter : activity_count) {
+    printf("CUPTI: Activity count\n");
+    for (auto iter : activityCount) {
       printf("%d : %d\n", iter.first, iter.second);
     }
   }

@@ -1,9 +1,8 @@
 #
 # Copyright 2014-2015 NVIDIA Corporation. All rights reserved
 #
-C=/usr/local/cuda-9.2
-C=/usr/local/cuda-10.0
-P=$(C)/extras/CUPTI
+C?=/usr/local/cuda-9.2
+P?=$(C)/extras/CUPTI
 
 CL=$(C)/lib64
 PL=$(P)/lib64
