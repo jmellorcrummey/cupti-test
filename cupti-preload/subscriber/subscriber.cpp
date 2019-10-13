@@ -57,6 +57,9 @@
 
 #define DEBUGGER_WAIT_FLAG_DEFAULT 0
 #define DEBUGGER_PRINT_FLAG_DEFAULT 1
+#define CUPTI_DRIVER_API_DEFAULT 1
+#define CUPTI_RUNTIME_API_DEFAULT 1
+#define CUPTI_RESOURCE_DEFAULT 1
   
 //************************************************************************
 // variables
@@ -114,6 +117,24 @@ cupti_subscriber_callback
   callback_count.fetch_add(1);
 }
 
+
+static int
+cupti_get_env
+(
+ const char *env,
+ int default_value
+)
+{
+  const char *value = getenv(env);
+  int ret = default_value;
+
+  if (value) {
+    ret = atoi(value);
+  }
+
+  return ret;
+}
+
 //************************************************************************
 // initialization 
 //************************************************************************
@@ -123,18 +144,22 @@ cupti_init()
 {
   debugger_wait();
 
+  int enable_driver_api = cupti_get_env("CUPTI_DRIVER_API", CUPTI_DRIVER_API_DEFAULT);
+  int enable_runtime_api = cupti_get_env("CUPTI_RUNTIME_API", CUPTI_RUNTIME_API_DEFAULT);
+  int enable_resource = cupti_get_env("CUPTI_RESOURCE", CUPTI_RESOURCE_DEFAULT);
+
   CUPTI_CALL(cuptiSubscribe(&cupti_subscriber,
     (CUpti_CallbackFunc) cupti_subscriber_callback,
     (void *) NULL));
 
   CUPTI_CALL(cuptiEnableDomain 
-    (1, cupti_subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
+    (enable_driver_api, cupti_subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
 
   CUPTI_CALL(cuptiEnableDomain 
-    (1, cupti_subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+    (enable_runtime_api, cupti_subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
 
   CUPTI_CALL(cuptiEnableDomain 
-    (1, cupti_subscriber, CUPTI_CB_DOMAIN_RESOURCE));
+    (enable_resource, cupti_subscriber, CUPTI_CB_DOMAIN_RESOURCE));
 }
 
 
