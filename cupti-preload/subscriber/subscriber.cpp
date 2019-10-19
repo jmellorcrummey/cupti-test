@@ -153,6 +153,39 @@ cupti_get_env
 //************************************************************************
 
 void
+cupti_buffer_alloc
+(
+ uint8_t **buffer,
+ size_t *buffer_size,
+ size_t *maxNumRecords
+)
+{
+  // cupti client call this function
+  int retval = posix_memalign((void **) buffer,
+    (size_t) 8,
+    (size_t) 16 * 1024 * 1024);
+
+  *buffer_size = 16 * 1024 * 1024;
+
+  *maxNumRecords = 0; 
+}
+
+
+void
+cupti_buffer_completion_callback
+(
+ CUcontext ctx,
+ uint32_t streamId,
+ uint8_t *buffer,
+ size_t size,
+ size_t validSize
+)
+{
+  free(buffer);
+}
+
+
+void
 cupti_init()
 {
   debugger_wait();
@@ -164,6 +197,8 @@ cupti_init()
   CUPTI_CALL(cuptiSubscribe(&cupti_subscriber,
     (CUpti_CallbackFunc) cupti_subscriber_callback,
     (void *) NULL));
+
+  CUPTI_CALL(cuptiActivityRegisterCallbacks(cupti_buffer_alloc, cupti_buffer_completion_callback));
 
   CUPTI_CALL(cuptiEnableDomain 
     (enable_driver_api, cupti_subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
