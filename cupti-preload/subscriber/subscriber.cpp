@@ -114,7 +114,20 @@ cupti_subscriber_callback
  const void *cb_info
 )
 {
-  callback_count.fetch_add(1);
+  if (domain == CUPTI_CB_DOMAIN_RESOURCE && cb_id == CUPTI_CBID_RESOURCE_CONTEXT_CREATED) {
+    const CUpti_ResourceData *rd = (const CUpti_ResourceData *) cb_info;
+
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_MEMCPY);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_MEMCPY2);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_MEMSET);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_CONTEXT);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_KERNEL);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_DEVICE);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_DRIVER);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_RUNTIME);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_SYNCHRONIZATION);
+    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION);
+  }
 }
 
 
