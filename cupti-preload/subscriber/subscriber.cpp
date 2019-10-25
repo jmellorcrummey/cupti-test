@@ -127,6 +127,14 @@ cupti_subscriber_callback
     cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_RUNTIME);
     cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_SYNCHRONIZATION);
     cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION);
+  } else if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
+    const CUpti_CallbackData *cd = (const CUpti_CallbackData *) cb_info;
+    uint64_t id = 1;
+    if (cd->callbackSite == CUPTI_API_ENTER) {
+      cuptiActivityPushExternalCorrelationId(CUPTI_EXTERNAL_CORRELATION_KIND_UNKNOWN, id);
+    } else {
+      cuptiActivityPopExternalCorrelationId(CUPTI_EXTERNAL_CORRELATION_KIND_UNKNOWN, &id);
+    }
   }
 }
 
