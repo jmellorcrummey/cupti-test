@@ -388,7 +388,7 @@ cupti_init()
 
   CUpti_ActivityPCSamplingConfig configPC;
   configPC.size = sizeof(CUpti_ActivityPCSamplingConfig);
-  configPC.samplingPeriod = 0;
+  configPC.samplingPeriod = (CUpti_ActivityPCSamplingPeriod) 0;
   configPC.samplingPeriod2 = cuptiSamplingPeriod;
 
   CUcontext cuCtx;
