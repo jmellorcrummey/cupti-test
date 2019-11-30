@@ -67,7 +67,7 @@
 #define ALIGN_SIZE (8)
 
 #define DEBUGGER_WAIT_FLAG_DEFAULT 0
-#define DEBUGGER_PRINT_FLAG_DEFAULT 1
+#define DEBUGGER_PRINT_FLAG_DEFAULT 0
 #define DEBUGGER_COUNT_FLAG_DEFAULT 1
 
 //************************************************************************
@@ -326,10 +326,7 @@ getPeriod()
     period = atoi(periodVal);
   } else {
     printf("usage: set environment variable CUPTI_SAMPLING_PERIOD " 
-	   "to a value from \n"
-	   "  1 (minimum sampling period --> fastest sampling) to "
-	   "5 (maximum sampling period --> slowest sampling)\n"
-           "setting to a value outside this range will disable CUPTI\n");
+	   "to a value from 5-31\n");
     exit(-1);
   }
 
@@ -391,8 +388,8 @@ cupti_init()
 
   CUpti_ActivityPCSamplingConfig configPC;
   configPC.size = sizeof(CUpti_ActivityPCSamplingConfig);
-  configPC.samplingPeriod = cuptiSamplingPeriod;
-  configPC.samplingPeriod2 = 0;
+  configPC.samplingPeriod = 0;
+  configPC.samplingPeriod2 = cuptiSamplingPeriod;
 
   CUcontext cuCtx;
   CUdevice dev;
