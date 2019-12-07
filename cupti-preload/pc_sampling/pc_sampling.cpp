@@ -316,10 +316,10 @@ samplingPeriod(CUpti_ActivityPCSamplingPeriod p)
 }
 
 
-static CUpti_ActivityPCSamplingPeriod
+static uint32_t
 getPeriod()
 {
-  int period = CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_INVALID; // default value
+  uint32_t period = 5; // default value
   const char *periodVal = getenv("CUPTI_SAMPLING_PERIOD");
 
   if (periodVal) {
@@ -330,14 +330,7 @@ getPeriod()
     exit(-1);
   }
 
-#define macro(enumName, val) case val: return enumName; 
-  switch (period) {
-    FORALL_PERIODS(macro)
-  default:
-      return CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_INVALID; 
-  }
-#undef macro
-  return CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_INVALID; 
+  return period;
 }
 
 
@@ -372,19 +365,17 @@ cupti_init()
   cudaDeviceProp prop;
   RUNTIME_API_CALL(cudaGetDeviceProperties(&prop, deviceNum));
 
-  CUpti_ActivityPCSamplingPeriod cuptiSamplingPeriod = getPeriod();
+  uint32_t cuptiSamplingPeriod = getPeriod();
 
-  if (cuptiSamplingPeriod == CUPTI_ACTIVITY_PC_SAMPLING_PERIOD_INVALID) {
-    printf("CUPTI: sampling disabled by setting sampling period to %s\n", 
-	   samplingPeriod(cuptiSamplingPeriod));
+  if (cuptiSamplingPeriod > 31 || cuptiSamplingPeriod < 5) {
+    printf("CUPTI: sampling disabled by setting sampling period to %u\n", cuptiSamplingPeriod);
     return;
   }
   samplingEnabled = 1;
 
   printf("CUPTI: initializing PC sampling for device %s " 
-	 "with compute capability %d.%d. Sampling period is %s.\n", 
-	 prop.name, prop.major, prop.minor, 
-	 samplingPeriod(cuptiSamplingPeriod));
+	 "with compute capability %d.%d. Sampling period is %u.\n", 
+	 prop.name, prop.major, prop.minor, cuptiSamplingPeriod);
 
   CUpti_ActivityPCSamplingConfig configPC;
   configPC.size = sizeof(CUpti_ActivityPCSamplingConfig);
