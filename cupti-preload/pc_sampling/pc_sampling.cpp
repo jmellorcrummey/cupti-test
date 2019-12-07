@@ -91,7 +91,8 @@ uint64_t totalBufferSize = 0;
 
 
 std::map<CUpti_ActivityKind, int> activityCount;
-std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsamplingCount;
+std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsamplingStallCount;
+std::map<unsigned long long, std::map<CUpti_ActivityPCSamplingStallReason, int> > pcsamplingPCCount;
 CUpti_SubscriberHandle cuptiSubscriber;
 
 //************************************************************************
@@ -234,7 +235,8 @@ countActivity(CUpti_Activity *record)
       {
         CUpti_ActivityPCSampling3 *psRecord = (CUpti_ActivityPCSampling3 *)record;
 
-        pcsamplingCount[psRecord->stallReason][psRecord->pcOffset] += psRecord->samples; 
+        pcsamplingStallCount[psRecord->stallReason][psRecord->pcOffset] += psRecord->samples; 
+        pcsamplingPCCount[psRecord->pcOffset][psRecord->stallReason] += psRecord->samples;
         break;
       }
     default:
@@ -421,11 +423,25 @@ cupti_fini()
 	 bufferCount, totalBufferSize);
 
   if (doprint && docount) {
-    printf("CUPTI: PC sampling count\n");
-    for (auto iter : pcsamplingCount) {
+    printf("CUPTI: PC sampling stall count\n");
+    for (auto iter : pcsamplingStallCount) {
+      printf("%d: ", iter.first);
+      auto sum = 0;
       for (auto pc_iter : iter.second) {
-        printf("%d : <%d, %d>\n", iter.first, pc_iter.first, pc_iter.second);
+        printf("<%p, %d>, ", pc_iter.first, pc_iter.second);
+        sum += pc_iter.second;
       }
+      printf(": %d\n", sum);
+    }
+    printf("CUPTI: PC sampling PC count\n");
+    for (auto iter : pcsamplingPCCount) {
+      auto sum = 0;
+      printf("%p: ", iter.first);
+      for (auto stall_iter : iter.second) {
+        sum += stall_iter.second;
+        printf("<%d, %d>, ", stall_iter.first, stall_iter.second);
+      }
+      printf(": %d\n", sum);
     }
     printf("CUPTI: Activity count\n");
     for (auto iter : activityCount) {
