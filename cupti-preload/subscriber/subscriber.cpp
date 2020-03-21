@@ -69,6 +69,8 @@
 volatile int debugger_wait_flag = DEBUGGER_WAIT_FLAG_DEFAULT; 
 volatile int doprint = DEBUGGER_PRINT_FLAG_DEFAULT;
 
+uint64_t droppedRecords = 0;
+
 CUpti_SubscriberHandle cupti_subscriber;
 std::atomic<uint64_t> callback_count;
 
@@ -76,13 +78,10 @@ std::atomic<uint64_t> callback_count;
 // forward declarations
 //************************************************************************
 
-#if 1
 // ensure cupti_fini runs at library unload
 static void cupti_fini() __attribute__((destructor));
 // ensure cupti_init runs at library load
 static void cupti_init() __attribute__((constructor));
-#endif
-
 
 //************************************************************************
 // debugging support
@@ -116,24 +115,20 @@ cupti_subscriber_callback
 {
   if (domain == CUPTI_CB_DOMAIN_RESOURCE && cb_id == CUPTI_CBID_RESOURCE_CONTEXT_CREATED) {
     const CUpti_ResourceData *rd = (const CUpti_ResourceData *) cb_info;
-
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_MEMCPY);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_MEMCPY2);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_MEMSET);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_CONTEXT);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_KERNEL);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_DEVICE);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_DRIVER);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_RUNTIME);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_SYNCHRONIZATION);
-    cuptiActivityEnableContext(rd->context, CUPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION);
   } else if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
     const CUpti_CallbackData *cd = (const CUpti_CallbackData *) cb_info;
     uint64_t id = 1;
     if (cd->callbackSite == CUPTI_API_ENTER) {
+      id = callback_count.fetch_add(1);
+      if (doprint) {
+        printf("Runtime push id %lu\n", id);
+      }
       cuptiActivityPushExternalCorrelationId(CUPTI_EXTERNAL_CORRELATION_KIND_UNKNOWN, id);
     } else {
       cuptiActivityPopExternalCorrelationId(CUPTI_EXTERNAL_CORRELATION_KIND_UNKNOWN, &id);
+      if (doprint) {
+        printf("Runtime pop id %lu\n", id);
+      }
     }
   }
 }
@@ -154,6 +149,23 @@ cupti_get_env
   }
 
   return ret;
+}
+
+
+static void
+print_activity(CUpti_Activity *record)
+{
+  switch (record->kind) {
+    case CUPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION:
+      {
+        CUpti_ActivityExternalCorrelation *external = (CUpti_ActivityExternalCorrelation *)record;
+        printf("CUPTI external ID %lu, correlation ID %u\n", external->externalId, external->correlationId);
+        break;
+      }
+    default:
+      printf("Unknown activity kind %u\n", record->kind);
+      break;
+  }
 }
 
 //************************************************************************
@@ -189,6 +201,27 @@ cupti_buffer_completion_callback
  size_t validSize
 )
 {
+  CUptiResult status;
+  CUpti_Activity *record = NULL;
+  do {
+    status = cuptiActivityGetNextRecord(buffer, validSize, &record);
+    if(status == CUPTI_SUCCESS) {
+      if (doprint) print_activity(record);
+    } else if (status == CUPTI_ERROR_MAX_LIMIT_REACHED) {
+      break;
+    } else {
+      CUPTI_CALL(status);
+    }
+  } while (1);
+
+  size_t dropped;
+  CUPTI_CALL(cuptiActivityGetNumDroppedRecords(ctx, streamId, &dropped));
+  if (dropped != 0) {
+    droppedRecords += dropped;  
+  }
+  if (doprint) {
+    printf("CUPTI dropped activities %zu\n", dropped);
+  }
   free(buffer);
 }
 
@@ -202,11 +235,11 @@ cupti_init()
   int enable_runtime_api = cupti_get_env("CUPTI_RUNTIME_API", CUPTI_RUNTIME_API_DEFAULT);
   int enable_resource = cupti_get_env("CUPTI_RESOURCE", CUPTI_RESOURCE_DEFAULT);
 
+  CUPTI_CALL(cuptiActivityRegisterCallbacks(cupti_buffer_alloc, cupti_buffer_completion_callback));
+
   CUPTI_CALL(cuptiSubscribe(&cupti_subscriber,
     (CUpti_CallbackFunc) cupti_subscriber_callback,
     (void *) NULL));
-
-  CUPTI_CALL(cuptiActivityRegisterCallbacks(cupti_buffer_alloc, cupti_buffer_completion_callback));
 
   CUPTI_CALL(cuptiEnableDomain 
     (enable_driver_api, cupti_subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
@@ -216,6 +249,17 @@ cupti_init()
 
   CUPTI_CALL(cuptiEnableDomain 
     (enable_resource, cupti_subscriber, CUPTI_CB_DOMAIN_RESOURCE));
+
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY2));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
+  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_SYNCHRONIZATION));
 }
 
 
@@ -231,4 +275,5 @@ cupti_fini()
     uint64_t cnt = callback_count.load();
     printf("%llu cupti callbacks\n", cnt);
   }
+  CUPTI_CALL(cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED));
 }
