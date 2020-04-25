@@ -93,7 +93,8 @@ uint64_t totalBufferSize = 0;
 std::map<CUpti_ActivityKind, int> activityCount;
 std::map<CUpti_ActivityPCSamplingStallReason, std::map<unsigned long long, int> > pcsamplingStallCount;
 std::map<unsigned long long, std::map<CUpti_ActivityPCSamplingStallReason, int> > pcsamplingPCCount;
-CUpti_SubscriberHandle cuptiSubscriber;
+CUpti_SubscriberHandle cupti_subscriber;
+CUpti_ActivityPCSamplingConfig configPC;
 
 //************************************************************************
 // forward declarations
@@ -353,6 +354,23 @@ getDevice()
   return deviceNum;
 }
 
+
+static void
+cupti_subscriber_callback
+(
+ void *userdata,
+ CUpti_CallbackDomain domain,
+ CUpti_CallbackId cb_id,
+ const void *cb_info
+)
+{
+  if (domain == CUPTI_CB_DOMAIN_RESOURCE && cb_id == CUPTI_CBID_RESOURCE_CONTEXT_CREATED) {
+    const CUpti_ResourceData *rd = (const CUpti_ResourceData *) cb_info;
+    CUPTI_CALL(cuptiActivityConfigurePCSampling(rd->context, &configPC));
+  }
+}
+
+
 //************************************************************************
 // initialization 
 //************************************************************************
@@ -379,16 +397,16 @@ cupti_init()
 	 "with compute capability %d.%d. Sampling period is %u.\n", 
 	 prop.name, prop.major, prop.minor, cuptiSamplingPeriod);
 
-  CUpti_ActivityPCSamplingConfig configPC;
   configPC.size = sizeof(CUpti_ActivityPCSamplingConfig);
   configPC.samplingPeriod = (CUpti_ActivityPCSamplingPeriod) 0;
   configPC.samplingPeriod2 = cuptiSamplingPeriod;
 
-  CUcontext cuCtx;
-  CUdevice dev;
-  DRIVER_API_CALL(cuDeviceGet(&dev, deviceNum));
-  DRIVER_API_CALL(cuCtxCreate(&cuCtx, 0, dev));
-  DRIVER_API_CALL(cuCtxSetCurrent(cuCtx));
+  CUPTI_CALL(cuptiSubscribe(&cupti_subscriber,
+    (CUpti_CallbackFunc) cupti_subscriber_callback,
+    (void *) NULL));
+
+  CUPTI_CALL(cuptiEnableDomain 
+    (1, cupti_subscriber, CUPTI_CB_DOMAIN_RESOURCE));
 
   CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
 
@@ -396,7 +414,6 @@ cupti_init()
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_PC_SAMPLING));
-  CUPTI_CALL(cuptiActivityConfigurePCSampling(cuCtx, &configPC));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
@@ -413,7 +430,7 @@ cupti_fini()
 {
   if (!samplingEnabled) return;
 
-  RUNTIME_API_CALL(cudaDeviceSynchronize());
+  //RUNTIME_API_CALL(cudaDeviceSynchronize());
   CUPTI_CALL(cuptiActivityFlushAll(0));
   printf("CUPTI: total samples = %" PRIu64 ", dropped samples = %" PRIu64 
 	 ", total records = %" PRIu64 ", dropped records = %" PRIu64 "\n",
