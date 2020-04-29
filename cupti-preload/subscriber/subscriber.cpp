@@ -163,7 +163,6 @@ print_activity(CUpti_Activity *record)
         break;
       }
     default:
-      printf("Unknown activity kind %u\n", record->kind);
       break;
   }
 }
