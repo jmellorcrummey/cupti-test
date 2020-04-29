@@ -1,4 +1,4 @@
-C?=/usr/local/cuda-10.1
+C?=/usr/local/cuda-10.2
 P?=$(C)/extras/CUPTI
 
 CL=$(C)/lib64
