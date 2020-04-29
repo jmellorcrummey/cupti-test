@@ -2,7 +2,7 @@
 
 ## Observation
 
-We wrote a simple benchmark using CUDA Driver API to test CUPTI's tracing overhead. The benchmark itself is finished without problem, whereas when a simple subscriber is used (`../cupti-preload/subscriber/subscribe.cpp`), we noticed a double-free memory corruption. If `cuCtxDestory` on line 147 (`main.cu`) is commented, the problem disappears. *nvprof* does not report memory corruption with this benchmark.
+We wrote a simple benchmark using CUDA Driver API to test CUPTI's tracing overhead. The benchmark itself finishes without problem, whereas if a simple subscriber is used (`../cupti-preload/subscriber/subscribe.cpp`), we notice a double-free memory corruption. If `cuCtxDestory` on line 147 (`main.cu`) is commented, the problem disappears. *nvprof* does not report memory corruption with this benchmark.
 
 ## Example usage
 
