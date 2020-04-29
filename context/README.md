@@ -10,6 +10,8 @@ We wrote a simple benchmark using CUDA Driver API to test CUPTI's tracing overhe
 
 ## Environment
 
+Processors: POWER9 + Volta V100
+
 CUDA: V10.2.89
 
 NVIDIA DRIVER: 440.33.01
