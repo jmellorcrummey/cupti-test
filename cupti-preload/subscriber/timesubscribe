@@ -1,0 +1,15 @@
+#!/bin/bash
+DIR=`dirname $0`
+
+echo "time with subscriber on:"
+
+declare -i start_with=`date +%s`
+time ${DIR}/subscribe $*
+declare -i end_with=`date +%s`
+
+echo "time with subscriber off:"
+  
+declare -i start_without=`date +%s`
+time $*
+declare -i end_without=`date +%s`
+

@@ -4,5 +4,4 @@ setting to a value outside this range will disable CUPTI.
 
 Example usage:
 
-CUPTI_SAMPLING_PERIOD=5  $HOME/pkgs-src/cupti-overhead-test/timesampling ./raja-perf-nolibs.exe -k MULADDSUB
-
+CUPTI_DEVICE_NUM=0 CUPTI_SAMPLING_PERIOD=5 /path/to/timesampling <application name>
